@@ -8,6 +8,8 @@
 # docker run --rm -it --network=host -v .:/app --gpus=all openpi_server /bin/bash
 
 FROM nvidia/cuda:12.2.2-cudnn8-runtime-ubuntu22.04@sha256:2d913b09e6be8387e1a10976933642c73c840c0b735f0bf3c28d97fc9bc422e0
+# FROM tck-xinan-registry.cn-chengdu.cr.aliyuncs.com/wair/cuda:12.2.2-cudnn8-runtime-ubuntu22.04
+
 COPY --from=ghcr.io/astral-sh/uv:0.5.1 /uv /uvx /bin/
 
 WORKDIR /app
@@ -24,6 +26,12 @@ ENV UV_PROJECT_ENVIRONMENT=/.venv
 
 # Install the project's dependencies using the lockfile and settings
 RUN uv venv --python 3.11.9 $UV_PROJECT_ENVIRONMENT
+
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG http_proxy
+ARG https_proxy
+
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \

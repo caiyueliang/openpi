@@ -8,6 +8,11 @@ services:
     build:
       context: ../..
       dockerfile: examples/libero/Dockerfile
+      args:
+        - HTTP_PROXY=${HTTP_PROXY}
+        - HTTPS_PROXY=${HTTPS_PROXY}
+        - http_proxy=${http_proxy}
+        - https_proxy=${https_proxy}
     init: true
     tty: true
     network_mode: host
@@ -33,6 +38,11 @@ services:
     build:
       context: ../..
       dockerfile: scripts/docker/serve_policy.Dockerfile
+      args:
+        - HTTP_PROXY=${HTTP_PROXY}
+        - HTTPS_PROXY=${HTTPS_PROXY}
+        - http_proxy=${http_proxy}
+        - https_proxy=${https_proxy}
     init: true
     tty: true
     network_mode: host
