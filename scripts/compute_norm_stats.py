@@ -108,10 +108,10 @@ def main(config_name: str,
             asset_id=asset_id if asset_id is not None else data_config.asset_id,
             rlds_data_dir=rlds_data_dir if rlds_data_dir is not None else data_config.rlds_data_dir
         )
-
     print(f"repo_id: {data_config.repo_id}")
     print(f"asset_id: {data_config.asset_id}")
     print(f"rlds_data_dir: {data_config.rlds_data_dir}")
+
     if data_config.rlds_data_dir is not None:
         data_loader, num_batches = create_rlds_dataloader(
             data_config, config.model.action_horizon, config.batch_size, max_frames
