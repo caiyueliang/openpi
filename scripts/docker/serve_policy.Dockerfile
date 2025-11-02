@@ -31,13 +31,17 @@ ARG HTTP_PROXY
 ARG HTTPS_PROXY
 ARG http_proxy
 ARG https_proxy
+ENV PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+ENV PIP_EXTRA_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+ENV UV_HTTP_TIMEOUT=120
+ENV UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     --mount=type=bind,source=packages/openpi-client/pyproject.toml,target=packages/openpi-client/pyproject.toml \
     --mount=type=bind,source=packages/openpi-client/src,target=packages/openpi-client/src \
-    GIT_LFS_SKIP_SMUDGE=1 uv sync --frozen --no-install-project --no-dev
+    GIT_LFS_SKIP_SMUDGE=1 uv sync --frozen --no-install-project --no-dev -i https://pypi.tuna.tsinghua.edu.cn/simple/
 
 # Copy transformers_replace files while preserving directory structure
 COPY src/openpi/models_pytorch/transformers_replace/ /tmp/transformers_replace/

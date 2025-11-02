@@ -14,7 +14,10 @@ import openpi.shared.normalize as normalize
 import openpi.training.config as _config
 import openpi.training.data_loader as _data_loader
 import openpi.transforms as transforms
+import dataclasses
 
+
+print(f"[DataConfig] {_config.DataConfig.__dataclass_fields__.keys()}")
 
 class RemoveStrings(transforms.DataTransformFn):
     def __call__(self, x: dict) -> dict:
@@ -86,10 +89,29 @@ def create_rlds_dataloader(
     return data_loader, num_batches
 
 
-def main(config_name: str, max_frames: int | None = None):
+def main(config_name: str, 
+         max_frames: int | None = None,
+         repo_id: str | None = None,
+         asset_id: str | None = None,
+         rlds_data_dir: str | None = None
+    ) -> None:
     config = _config.get_config(config_name)
+    print(f"config: {config}")
     data_config = config.data.create(config.assets_dirs, config.model)
+    print(f"data_config: {data_config}")
 
+    # 使用 dataclasses.replace() 创建新的配置对象，而不是直接修改字段
+    if repo_id is not None or asset_id is not None or rlds_data_dir is not None:
+        data_config = dataclasses.replace(
+            data_config,
+            repo_id=repo_id if repo_id is not None else data_config.repo_id,
+            asset_id=asset_id if asset_id is not None else data_config.asset_id,
+            rlds_data_dir=rlds_data_dir if rlds_data_dir is not None else data_config.rlds_data_dir
+        )
+
+    print(f"repo_id: {data_config.repo_id}")
+    print(f"asset_id: {data_config.asset_id}")
+    print(f"rlds_data_dir: {data_config.rlds_data_dir}")
     if data_config.rlds_data_dir is not None:
         data_loader, num_batches = create_rlds_dataloader(
             data_config, config.model.action_horizon, config.batch_size, max_frames
