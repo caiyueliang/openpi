@@ -28,15 +28,15 @@ from io import BytesIO
 import logging
 
 
-online_url = "https://cloud.zidongtaichu.com/maas/v1"
+# online_url = "https://cloud.zidongtaichu.com/maas/v1"
 # online_url = "https://ai-maas.wair.ac.cn/maas/v1"
-# online_url = "https://platform-cloud.wair.ac.cn/api/v1/infer/11776/v1"
+online_url = "https://platform-cloud.wair.ac.cn/api/v1/infer/11776/v1"
 
 client = OpenAI(api_key='EMPTY', 
                 base_url=online_url,
-                default_headers = {"Authorization": 'Bearer ryvsk3zz73419gkgubrnvufp'
-                # default_headers = {"Authorization": 'Admin'
-        })
+                # default_headers = {"Authorization": 'Bearer ryvsk3zz73419gkgubrnvufp'
+                default_headers = {"Authorization": 'Admin'}
+        )
 
 def image_to_base64(image_path,timeout=8):
     """将图片转换为base64字符串"""
@@ -103,8 +103,8 @@ def run_backend(
     t_1 = time.perf_counter() 
 
     response = client.chat.completions.create(
-        model='taichu_vl_new',
-        # model='taichumm',
+        # model='taichu_vl_new',
+        model='taichumm',
         messages= messages,
         temperature=0.8,
         max_tokens=32,
