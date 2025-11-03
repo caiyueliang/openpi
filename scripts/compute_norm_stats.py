@@ -96,9 +96,16 @@ def main(config_name: str,
          rlds_data_dir: str | None = None
     ) -> None:
     config = _config.get_config(config_name)
-    print(f"config: {config}")
+    print(f"[data_config] ================================================")
+    print(f"[config] {config}")
+    print(f"[config.assets_dirs] {config.assets_dirs}")
+    print(f"[config.model] {config.model}")
     data_config = config.data.create(config.assets_dirs, config.model)
-    print(f"data_config: {data_config}")
+    print(f"[data_config] ================================================")
+    print(f"[data_config] {data_config}")
+    print(f"[data_config.repo_id] before: {data_config.repo_id}")
+    print(f"[data_config.asset_id] before: {data_config.asset_id}")
+    print(f"[data_config.rlds_data_dir] before: {data_config.rlds_data_dir}")
 
     # 使用 dataclasses.replace() 创建新的配置对象，而不是直接修改字段
     if repo_id is not None or asset_id is not None or rlds_data_dir is not None:
@@ -108,9 +115,14 @@ def main(config_name: str,
             asset_id=asset_id if asset_id is not None else data_config.asset_id,
             rlds_data_dir=rlds_data_dir if rlds_data_dir is not None else data_config.rlds_data_dir
         )
-    print(f"repo_id: {data_config.repo_id}")
-    print(f"asset_id: {data_config.asset_id}")
-    print(f"rlds_data_dir: {data_config.rlds_data_dir}")
+        src_repo_id = data_config.repo_id
+    else:
+        src_repo_id = data_config.repo_id
+    print(f"[data_config] ================================================")
+    print(f"[data_config.repo_id] after: {data_config.repo_id}")
+    print(f"[data_config.asset_id] after: {data_config.asset_id}")
+    print(f"[data_config.rlds_data_dir] after: {data_config.rlds_data_dir}")
+    print(f"[data_config] ================================================")
 
     if data_config.rlds_data_dir is not None:
         data_loader, num_batches = create_rlds_dataloader(
@@ -130,8 +142,13 @@ def main(config_name: str,
 
     norm_stats = {key: stats.get_statistics() for key, stats in stats.items()}
 
-    output_path = config.assets_dirs / data_config.repo_id
+    # output_path = config.assets_dirs / data_config.repo_id
+    output_path = config.assets_dirs / src_repo_id
+    print(f"[data_config] ================================================")
+    print(f"[config.assets_dirs] {config.assets_dirs}")
+    print(f"[src_repo_id] {src_repo_id}")
     print(f"Writing stats to: {output_path}")
+    print(f"[data_config] ================================================")
     normalize.save(output_path, norm_stats)
 
 
