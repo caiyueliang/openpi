@@ -25,11 +25,13 @@ import base64
 import json
 from PIL import Image
 from io import BytesIO
+import logging
 
 
-
-online_url = "https://cloud.zidongtaichu.com/maas/v1"
+# online_url = "https://cloud.zidongtaichu.com/maas/v1"
 online_url = "https://ai-maas.wair.ac.cn/maas/v1"
+# online_url = "https://platform-cloud.wair.ac.cn/api/v1/infer/11776"
+
 client = OpenAI(api_key='EMPTY', 
                 base_url=online_url,
                 default_headers = {"Authorization": 'Bearer ryvsk3zz73419gkgubrnvufp'
@@ -110,7 +112,7 @@ def run_backend(
         )
     first_token = True 
     t0 = time.perf_counter() 
-    print(f'load img:{t0 - t_1}')
+    logging.warning(f'load img:{t0 - t_1}')
     if stream:  
         for dict_obj in response:
               
@@ -118,8 +120,8 @@ def run_backend(
                 t1 = time.perf_counter()
                 first_token = False
                 first_token_times[i] = t1 - t_1
-                print(first_token_times[i])
-                # print(dict_obj)
+                logging.warning(first_token_times[i])
+                # logging.warning(dict_obj)
             if dict_obj.usage is not None:
                 t2 = time.perf_counter()
                  
@@ -149,7 +151,7 @@ def send_requests(thread_num):
     t1 = time.perf_counter()-t0
 
     batch_size = 1.0
-    print(f'first_token_times:{first_token_times}')
+    logging.warning(f'first_token_times:{first_token_times}')
     return_list = []
     return_list.append(thread_num)  # 并发请求数量
     return_list.append(batch_size)  # 1
@@ -213,7 +215,7 @@ if __name__ == "__main__":
             for j in range(0,num_client):
                 return_list = send_requests(2 ** j) 
                 # return_list = send_requests(4) 
-                print(return_list)
+                logging.warning(return_list)
                 csv_writer.writerow(return_list)
 
 
