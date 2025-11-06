@@ -5,6 +5,7 @@ import logging
 import socket
 from typing import Any, Dict, Optional
 
+import numpy as np
 import tyro
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -14,7 +15,9 @@ from openpi.policies import policy as _policy
 from openpi.policies import policy_config as _policy_config
 from openpi.training import config as _config
 import logging
-
+import base64
+from io import BytesIO
+from PIL import Image
 
 class EnvMode(enum.Enum):
     """Supported environments."""
@@ -89,7 +92,9 @@ def create_policy(args: Args) -> _policy.Policy:
 # === FastAPI Model Definitions ===
 
 class InferenceRequest(BaseModel):
-    observation: Dict[str, Any]
+    image: Optional[str] = None
+    wrist_image: Optional[str] = None
+    state: Optional[list] = None
     prompt: Optional[str] = None  # 如果请求没给，则使用 default_prompt
 
 
@@ -99,6 +104,14 @@ class InferenceResponse(BaseModel):
     # 可根据实际返回添加更多字段
 
 
+def base64_to_pil(b64_str: str) -> Image.Image:
+    try:
+        image_data = base64.b64decode(b64_str)
+        image = Image.open(BytesIO(image_data))
+        return image
+    except Exception as e:
+        raise ValueError(f"Invalid base64 image: {e}")
+    
 # === Main Server Logic ===
 
 def main(args: Args) -> None:
@@ -126,22 +139,28 @@ def main(args: Args) -> None:
     @app.post("/act", response_model=InferenceResponse)
     def act(request: InferenceRequest):
         try:
+            logging.info(f"[act] Received request: {request.prompt}; {request.state}")
+
             # 构造输入数据（根据你的 policy 接口调整）
             data = {
-                "observation": request.observation,
+                "observation/image": base64_to_pil(request.image),
+                "observation/wrist_image": base64_to_pil(request.wrist_image),
+                "observation/state": np.array(request.state),
                 "prompt": request.prompt or args.default_prompt,
             }
 
             # 调用策略模型推理
-            result = policy.step(data)  # 假设 .step() 返回动作或其他结果
+            result = policy.infer(data)
+            # logging.info(f"[act] Returning result: {result}")
 
             # 假设 result 包含 'action' 字段
-            action = result.get("action") if isinstance(result, dict) else result
+            actions = result.get("actions") if isinstance(result, dict) else result
             timestamp = result.get("timestamp", 0.0) if isinstance(result, dict) else 0.0
 
-            return InferenceResponse(action=action, timestamp=timestamp)
+            return InferenceResponse(action=actions[:5].tolist(), timestamp=timestamp)
 
         except Exception as e:
+            logging.exception(e)
             logging.error("Policy inference failed", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
 
