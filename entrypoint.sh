@@ -16,4 +16,5 @@ echo "[PORT] $PORT"
 echo "============================================================="
 
 # 启动 Python 服务
-uv run scripts/serve_policy.py policy:checkpoint --policy.config=${POLICY_CONFIG} --policy.dir=${MODEL_PATH}
+# uv run scripts/serve_policy.py policy:checkpoint --policy.config=${POLICY_CONFIG} --policy.dir=${MODEL_PATH}
+uv run scripts/serve_http.py policy:checkpoint --policy.config=${POLICY_CONFIG} --policy.dir=${MODEL_PATH}

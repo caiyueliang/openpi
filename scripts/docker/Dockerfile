@@ -9,13 +9,12 @@
 
 FROM tck-xinan-registry.cn-chengdu.cr.aliyuncs.com/wair/openpi_server:base
 
-RUN uv add fastapi uvicorn  -i https://pypi.tuna.tsinghua.edu.cn/simple/ 
-
 WORKDIR /workspace/openpi
 
 COPY ./.cache /root/.cache
 COPY ./docs /workspace/openpi/docs
 COPY ./examples /workspace/openpi/examples
+COPY ./images /workspace/openpi/images
 COPY ./packages /workspace/openpi/packages
 COPY ./scripts /workspace/openpi/scripts
 COPY ./src /workspace/openpi/src
@@ -28,6 +27,8 @@ COPY ./LICENSE_GEMMA.txt /workspace/openpi/LICENSE_GEMMA.txt
 COPY ./pyproject.toml /workspace/openpi/pyproject.toml
 COPY ./README.md /workspace/openpi/README.md
 COPY ./uv.lock /workspace/openpi/uv.lock
+
+RUN uv add fastapi uvicorn --frozen -i https://pypi.tuna.tsinghua.edu.cn/simple/ 
 
 COPY ./entrypoint.sh /workspace/openpi/entrypoint.sh
 

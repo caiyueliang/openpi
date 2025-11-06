@@ -35,17 +35,16 @@ def main():
     args = parse_args()
 
     # 1. 本地图像路径（按需修改）
-    base_path = "/home/caiyueliang/AgiBot-World_28ad77d/UniVLA/frames/iros_clear_table_in_the_restaurant_20251028_111828/"
+    base_path = "./images/iros_clear_table_in_the_restaurant_20251028_111828/"
     head_img_path = base_path + "head_00050.png"
-    wrist_left_img_path = base_path + "wrist_l_00050.png"
+    wrist_left_img_path = base_path + "wrist_r_00050.png"
 
     # 2. 构造 JSON 请求体
     request_data = {
         "image": image_to_base64(head_img_path),
         "wrist_image": image_to_base64(wrist_left_img_path),
         "state": [-1.106, 0.529, 0.454, -1.241, 0.584, 1.419, -0.076, 0.000],
-        "prompt": "Pick up the bowl on the table near the right arm with the right arm.",
-        
+        "prompt": "Pick up the bowl on the table near the right arm with the right arm.", 
     }
 
     # 3. 构造请求头
