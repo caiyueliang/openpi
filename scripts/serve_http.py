@@ -1,19 +1,22 @@
+# serve_policy_http.py
 import dataclasses
 import enum
 import logging
 import socket
+from typing import Any, Dict, Optional
 
 import tyro
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import uvicorn
 
 from openpi.policies import policy as _policy
 from openpi.policies import policy_config as _policy_config
-from openpi.serving import websocket_policy_server
 from openpi.training import config as _config
 
 
 class EnvMode(enum.Enum):
     """Supported environments."""
-
     ALOHA = "aloha"
     ALOHA_SIM = "aloha_sim"
     DROID = "droid"
@@ -23,10 +26,7 @@ class EnvMode(enum.Enum):
 @dataclasses.dataclass
 class Checkpoint:
     """Load a policy from a trained checkpoint."""
-
-    # Training config name (e.g., "pi0_aloha_sim").
     config: str
-    # Checkpoint directory (e.g., "checkpoints/pi0_aloha_sim/exp/10000").
     dir: str
 
 
@@ -38,20 +38,10 @@ class Default:
 @dataclasses.dataclass
 class Args:
     """Arguments for the serve_policy script."""
-
-    # Environment to serve the policy for. This is only used when serving default policies.
     env: EnvMode = EnvMode.ALOHA_SIM
-
-    # If provided, will be used in case the "prompt" key is not present in the data, or if the model doesn't have a default
-    # prompt.
-    default_prompt: str | None = None
-
-    # Port to serve the policy on.
+    default_prompt: Optional[str] = None
     port: int = 8080
-    # Record the policy's behavior for debugging.
     record: bool = False
-
-    # Specifies how to load the policy. If not provided, the default policy for the environment will be used.
     policy: Checkpoint | Default = dataclasses.field(default_factory=Default)
 
 
@@ -77,7 +67,6 @@ DEFAULT_CHECKPOINT: dict[EnvMode, Checkpoint] = {
 
 
 def create_default_policy(env: EnvMode, *, default_prompt: str | None = None) -> _policy.Policy:
-    """Create a default policy for the given environment."""
     if checkpoint := DEFAULT_CHECKPOINT.get(env):
         return _policy_config.create_trained_policy(
             _config.get_config(checkpoint.config), checkpoint.dir, default_prompt=default_prompt
@@ -86,7 +75,6 @@ def create_default_policy(env: EnvMode, *, default_prompt: str | None = None) ->
 
 
 def create_policy(args: Args) -> _policy.Policy:
-    """Create a policy from the given arguments."""
     match args.policy:
         case Checkpoint():
             return _policy_config.create_trained_policy(
@@ -96,25 +84,68 @@ def create_policy(args: Args) -> _policy.Policy:
             return create_default_policy(args.env, default_prompt=args.default_prompt)
 
 
+# === FastAPI Model Definitions ===
+
+class InferenceRequest(BaseModel):
+    observation: Dict[str, Any]
+    prompt: Optional[str] = None  # 如果请求没给，则使用 default_prompt
+
+
+class InferenceResponse(BaseModel):
+    action: list
+    timestamp: float
+    # 可根据实际返回添加更多字段
+
+
+# === Main Server Logic ===
+
 def main(args: Args) -> None:
     policy = create_policy(args)
-    policy_metadata = policy.metadata
 
-    # Record the policy's behavior.
     if args.record:
         policy = _policy.PolicyRecorder(policy, "policy_records")
 
+    # 创建 FastAPI 应用
+    app = FastAPI(
+        title="OpenPI Policy Inference Server",
+        description="Serving robot policy models via HTTP.",
+        version="1.0.0"
+    )
+
+    @app.get("/")
+    def root():
+        return {"message": "OpenPI Policy Server is running", "env": args.env.value}
+
+    @app.post("/infer", response_model=InferenceResponse)
+    def infer(request: InferenceRequest):
+        try:
+            # 构造输入数据（根据你的 policy 接口调整）
+            data = {
+                "observation": request.observation,
+                "prompt": request.prompt or args.default_prompt,
+            }
+
+            # 调用策略模型推理
+            result = policy.step(data)  # 假设 .step() 返回动作或其他结果
+
+            # 假设 result 包含 'action' 字段
+            action = result.get("action") if isinstance(result, dict) else result
+            timestamp = result.get("timestamp", 0.0) if isinstance(result, dict) else 0.0
+
+            return InferenceResponse(action=action, timestamp=timestamp)
+
+        except Exception as e:
+            logging.error("Policy inference failed", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
+
+    # 启动前打印信息
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
-    logging.info("Creating server (host: %s, ip: %s)", hostname, local_ip)
+    logging.info("Starting HTTP server (host: %s, ip: %s, port: %d)", hostname, local_ip, args.port)
+    logging.info("Visit http://%s:%d/docs for API documentation", local_ip, args.port)
 
-    server = websocket_policy_server.WebsocketPolicyServer(
-        policy=policy,
-        host="0.0.0.0",
-        port=args.port,
-        metadata=policy_metadata,
-    )
-    server.serve_forever()
+    # 使用 Uvicorn 运行应用
+    uvicorn.run(app, host="0.0.0.0", port=args.port)
 
 
 if __name__ == "__main__":
