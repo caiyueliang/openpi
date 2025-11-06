@@ -13,6 +13,7 @@ import uvicorn
 from openpi.policies import policy as _policy
 from openpi.policies import policy_config as _policy_config
 from openpi.training import config as _config
+import logging
 
 
 class EnvMode(enum.Enum):
@@ -38,7 +39,7 @@ class Default:
 @dataclasses.dataclass
 class Args:
     """Arguments for the serve_policy script."""
-    env: EnvMode = EnvMode.ALOHA_SIM
+    env: EnvMode = EnvMode.LIBERO
     default_prompt: Optional[str] = None
     port: int = 8080
     record: bool = False
@@ -75,6 +76,7 @@ def create_default_policy(env: EnvMode, *, default_prompt: str | None = None) ->
 
 
 def create_policy(args: Args) -> _policy.Policy:
+    logging.warning(f"[create_policy] args.policy: {args.policy}")
     match args.policy:
         case Checkpoint():
             return _policy_config.create_trained_policy(
@@ -100,8 +102,9 @@ class InferenceResponse(BaseModel):
 # === Main Server Logic ===
 
 def main(args: Args) -> None:
+    logging.warning(f"[main] args: {args}")
     policy = create_policy(args)
-
+    logging.warning(f"[main] policy: {policy}")
     if args.record:
         policy = _policy.PolicyRecorder(policy, "policy_records")
 
@@ -116,8 +119,12 @@ def main(args: Args) -> None:
     def root():
         return {"message": "OpenPI Policy Server is running", "env": args.env.value}
 
-    @app.post("/infer", response_model=InferenceResponse)
-    def infer(request: InferenceRequest):
+    @app.get("/health")
+    async def health_check():
+        return {"status": "ok"}
+
+    @app.post("/act", response_model=InferenceResponse)
+    def act(request: InferenceRequest):
         try:
             # 构造输入数据（根据你的 policy 接口调整）
             data = {

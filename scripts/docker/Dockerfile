@@ -9,6 +9,8 @@
 
 FROM tck-xinan-registry.cn-chengdu.cr.aliyuncs.com/wair/openpi_server:base
 
+RUN uv add fastapi uvicorn  -i https://pypi.tuna.tsinghua.edu.cn/simple/ 
+
 WORKDIR /workspace/openpi
 
 COPY ./.cache /root/.cache
