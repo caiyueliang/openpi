@@ -9,6 +9,11 @@
 
 FROM tck-xinan-registry.cn-chengdu.cr.aliyuncs.com/wair/openpi_server:base
 
+ENV PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+ENV PIP_EXTRA_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+ENV UV_HTTP_TIMEOUT=120
+ENV UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+
 WORKDIR /workspace/openpi
 
 COPY ./.cache /root/.cache
@@ -28,7 +33,7 @@ COPY ./pyproject.toml /workspace/openpi/pyproject.toml
 COPY ./README.md /workspace/openpi/README.md
 COPY ./uv.lock /workspace/openpi/uv.lock
 
-RUN uv add fastapi uvicorn --frozen -i https://pypi.tuna.tsinghua.edu.cn/simple/ 
+# RUN uv add fastapi uvicorn --frozen -i https://pypi.tuna.tsinghua.edu.cn/simple/ 
 
 COPY ./entrypoint.sh /workspace/openpi/entrypoint.sh
 
