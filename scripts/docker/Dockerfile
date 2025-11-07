@@ -7,7 +7,7 @@
 # Run the container:
 # docker run --rm -it --network=host -v .:/app --gpus=all openpi_server /bin/bash
 
-FROM tck-xinan-registry.cn-chengdu.cr.aliyuncs.com/wair/openpi_server:base
+FROM tck-xinan-registry.cn-chengdu.cr.aliyuncs.com/wair/openpi:base
 
 ENV PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 ENV PIP_EXTRA_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
@@ -33,7 +33,7 @@ COPY ./pyproject.toml /workspace/openpi/pyproject.toml
 COPY ./README.md /workspace/openpi/README.md
 COPY ./uv.lock /workspace/openpi/uv.lock
 
-# RUN uv add fastapi uvicorn --frozen -i https://pypi.tuna.tsinghua.edu.cn/simple/ 
+RUN uv pip install fastapi==0.121.0 uvicorn==0.38.0
 
 COPY ./entrypoint.sh /workspace/openpi/entrypoint.sh
 
