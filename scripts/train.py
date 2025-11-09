@@ -192,7 +192,7 @@ def train_step(
 
 
 def main(config: _config.TrainConfig):
-    print(f"[config] {config}")
+    logging.warning(f"[config] {config}")
     init_logging()
     logging.info(f"Running on: {platform.node()}")
 
@@ -219,7 +219,6 @@ def main(config: _config.TrainConfig):
     init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
 
     logging.warning(f"[config] {config}")
-    logging.warning(f"[sharding] {data_sharding}")
     data_loader = _data_loader.create_data_loader(
         config,
         sharding=data_sharding,
