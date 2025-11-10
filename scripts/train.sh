@@ -80,7 +80,7 @@ done
 # }
 
 # 打印转换后的命令（用于调试）
-echo "转换后的命令:"
+echo "【转换后的命令】"
 echo "uv run scripts/train.py '$model_name' ${final_args[@]}"
 echo ""
 
