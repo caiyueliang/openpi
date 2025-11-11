@@ -131,14 +131,14 @@ def base64_to_pil(b64_str: str) -> Image.Image:
 def main(args: Args) -> None:
     logging.warning(f"[main] old args: {args}")
 
-    base_dir = find_first_params_dir(root_dir=args.policy.dir)
-    if base_dir:
-        logging.warning(f"[main] 目录: {base_dir} 中找到 'params' 子文件夹，使用该目录作为模型路径。")
-        args.policy.dir = base_dir
-        logging.warning(f"[main] new args: {args}")
-    else:
-        logging.warning(f"[main] 目录: {args.policy.dir} 中未找到 'params' 子文件夹，请检查模型路径。")
-        exit(1)
+    # base_dir = find_first_params_dir(root_dir=args.policy.dir)
+    # if base_dir:
+    #     logging.warning(f"[main] 目录: {base_dir} 中找到 'params' 子文件夹，使用该目录作为模型路径。")
+    #     args.policy.dir = base_dir
+    #     logging.warning(f"[main] new args: {args}")
+    # else:
+    #     logging.warning(f"[main] 目录: {args.policy.dir} 中未找到 'params' 子文件夹，请检查模型路径。")
+    #     exit(1)
 
     policy = create_policy(args)
     logging.warning(f"[main] policy: {policy}")

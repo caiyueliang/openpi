@@ -218,25 +218,29 @@ def postprocess(config: _config.TrainConfig):
         shutil.move(os.path.join(base_dir, "assets"), checkpoint_base_dir)
         logging.info(f"拷贝文件 {os.path.join(base_dir, 'params')} -> {checkpoint_base_dir}")
         shutil.move(os.path.join(base_dir, "params"), checkpoint_base_dir)
-        logging.info(f"删除目录 {dest_path}")
-        shutil.rmtree(base_dir)
+        delete_dir = os.path.join(checkpoint_base_dir, config.name)
+        logging.info(f"删除目录 {delete_dir}")
+        shutil.rmtree(delete_dir)
     else:
         logging.warning(f"[main] 目录: {checkpoint_base_dir} 中未找到 'params' 子文件夹，请检查模型路径。")
         exit(1)
 
     # 拷贝norm_stats.json
     data_repo_path = epath.Path(config.data.repo_id)
-    norm_stats_path = os.path.join(data_repo_path, "norm_stats.json")
+    norm_stats_path = data_repo_path / "norm_stats.json"
     if not norm_stats_path.exists():
         raise FileNotFoundError(
             f"norm_stats.json not found in data repo directory: {data_repo_path}. "
             "This file is required for normalization during inference."
         )
 
-
-    dest_path = os.path.join(checkpoint_base_dir, "assets", "norm_stats.json")
+    dest_dir = checkpoint_base_dir / "assets" / "physical-intelligence" / "libero"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_path = dest_dir / "norm_stats.json"
     logging.info(f"拷贝文件 {norm_stats_path} -> {dest_path}")
     shutil.copy(norm_stats_path, dest_path)
+
+    logging.info("[postprocess] finished ...")
 
 
 def main(config: _config.TrainConfig):
@@ -330,6 +334,7 @@ def main(config: _config.TrainConfig):
     logging.info("Waiting for checkpoint manager to finish")
     checkpoint_manager.wait_until_finished()
 
+    # 执行一些后处理，输出目录调整，拷贝norm_stats.json等
     postprocess(config)
 
 
