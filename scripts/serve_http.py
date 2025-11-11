@@ -1,4 +1,5 @@
 # serve_policy_http.py
+import os
 import dataclasses
 import enum
 import logging
@@ -104,6 +105,19 @@ class InferenceResponse(BaseModel):
     # 可根据实际返回添加更多字段
 
 
+def find_first_params_dir(root_dir):
+    """
+    在给定的根目录下，查找第一个包含名为 'params' 的子文件夹的目录，
+    并返回该目录的路径。如果未找到，返回 None。
+    
+    :param root_dir: 要搜索的根目录路径（字符串）
+    :return: 第一个包含 'params' 子目录的目录路径（字符串）或 None
+    """
+    for dirpath, dirnames, _ in os.walk(root_dir):
+        if 'params' in dirnames:
+            return dirpath
+    return None
+
 def base64_to_pil(b64_str: str) -> Image.Image:
     try:
         image_data = base64.b64decode(b64_str)
@@ -115,7 +129,17 @@ def base64_to_pil(b64_str: str) -> Image.Image:
 # === Main Server Logic ===
 
 def main(args: Args) -> None:
-    logging.warning(f"[main] args: {args}")
+    logging.warning(f"[main] old args: {args}")
+
+    base_dir = find_first_params_dir(root_dir=args.policy.dir)
+    if base_dir:
+        logging.warning(f"[main] 目录: {base_dir} 中找到 'params' 子文件夹，使用该目录作为模型路径。")
+        args.policy.dir = base_dir
+        logging.warning(f"[main] new args: {args}")
+    else:
+        logging.warning(f"[main] 目录: {args.policy.dir} 中未找到 'params' 子文件夹，请检查模型路径。")
+        exit(1)
+
     policy = create_policy(args)
     logging.warning(f"[main] policy: {policy}")
     if args.record:

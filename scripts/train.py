@@ -3,6 +3,8 @@ import functools
 import logging
 import platform
 from typing import Any
+import shutil
+import os
 
 import etils.epath as epath
 import flax.nnx as nnx
@@ -190,6 +192,52 @@ def train_step(
     }
     return new_state, info
 
+def find_first_params_dir(root_dir):
+    """
+    在给定的根目录下，查找第一个包含名为 'params' 的子文件夹的目录，
+    并返回该目录的路径。如果未找到，返回 None。
+    
+    :param root_dir: 要搜索的根目录路径（字符串）
+    :return: 第一个包含 'params' 子目录的目录路径（字符串）或 None
+    """
+    for dirpath, dirnames, _ in os.walk(root_dir):
+        if 'params' in dirnames:
+            return dirpath
+    return None
+
+def postprocess(config: _config.TrainConfig):
+    logging.info("[postprocess] starting ...")
+    checkpoint_base_dir = epath.Path(config.checkpoint_base_dir)
+    checkpoint_base_dir.mkdir(parents=True, exist_ok=True)
+
+    # 调整目录
+    base_dir = find_first_params_dir(root_dir=checkpoint_base_dir)
+    if base_dir:
+        logging.warning(f"[main] 目录: {base_dir} 中找到 'params' 子文件夹，目录结构调整。")
+        logging.info(f"拷贝文件 {os.path.join(base_dir, 'assets')} -> {checkpoint_base_dir}")
+        shutil.move(os.path.join(base_dir, "assets"), checkpoint_base_dir)
+        logging.info(f"拷贝文件 {os.path.join(base_dir, 'params')} -> {checkpoint_base_dir}")
+        shutil.move(os.path.join(base_dir, "params"), checkpoint_base_dir)
+        logging.info(f"删除目录 {dest_path}")
+        shutil.rmtree(base_dir)
+    else:
+        logging.warning(f"[main] 目录: {checkpoint_base_dir} 中未找到 'params' 子文件夹，请检查模型路径。")
+        exit(1)
+
+    # 拷贝norm_stats.json
+    data_repo_path = epath.Path(config.data.repo_id)
+    norm_stats_path = os.path.join(data_repo_path, "norm_stats.json")
+    if not norm_stats_path.exists():
+        raise FileNotFoundError(
+            f"norm_stats.json not found in data repo directory: {data_repo_path}. "
+            "This file is required for normalization during inference."
+        )
+
+
+    dest_path = os.path.join(checkpoint_base_dir, "assets", "norm_stats.json")
+    logging.info(f"拷贝文件 {norm_stats_path} -> {dest_path}")
+    shutil.copy(norm_stats_path, dest_path)
+
 
 def main(config: _config.TrainConfig):
     logging.warning(f"[config] {config}")
@@ -262,7 +310,12 @@ def main(config: _config.TrainConfig):
         with sharding.set_mesh(mesh):
             train_state, info = ptrain_step(train_rng, train_state, batch)
         infos.append(info)
+        # logging.warning(f"[train_state] {train_state};")  
+        
         if step % config.log_interval == 0:
+            # import ipdb
+            # ipdb.set_trace()
+            
             stacked_infos = common_utils.stack_forest(infos)
             reduced_info = jax.device_get(jax.tree.map(jnp.mean, stacked_infos))
             info_str = ", ".join(f"{k}={v:.4f}" for k, v in reduced_info.items())
@@ -276,6 +329,8 @@ def main(config: _config.TrainConfig):
 
     logging.info("Waiting for checkpoint manager to finish")
     checkpoint_manager.wait_until_finished()
+
+    postprocess(config)
 
 
 if __name__ == "__main__":
