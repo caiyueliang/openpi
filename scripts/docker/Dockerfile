@@ -33,7 +33,7 @@ COPY ./pyproject.toml /workspace/openpi/pyproject.toml
 COPY ./README.md /workspace/openpi/README.md
 COPY ./uv.lock /workspace/openpi/uv.lock
 
-RUN uv pip install fastapi==0.121.0 uvicorn==0.38.0
+RUN uv pip install fastapi==0.121.0 uvicorn==0.38.0 ipdb
 
 COPY ./entrypoint.sh /workspace/openpi/entrypoint.sh
 

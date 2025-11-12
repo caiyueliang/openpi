@@ -28,6 +28,7 @@ import openpi.training.optimizer as _optimizer
 import openpi.training.sharding as sharding
 import openpi.training.utils as training_utils
 import openpi.training.weight_loaders as _weight_loaders
+from metrics_logger import MetricsLogger
 
 
 def init_logging():
@@ -138,6 +139,7 @@ def init_train_state(
 @at.typecheck
 def train_step(
     config: _config.TrainConfig,
+    lr_schedule_fn,
     rng: at.KeyArrayLike,
     state: training_utils.TrainState,
     batch: tuple[_model.Observation, _model.Actions],
@@ -185,10 +187,20 @@ def train_step(
             lambda _, x: x.value.ndim > 1,
         ),
     )
+    
+    # TODO: [CYL] 获取当前学习率
+    # # 获取当前学习率（前提是 tx 是 inject_hyperparams 包装的）
+    # if hasattr(state.opt_state, 'hyperparams') and 'learning_rate' in state.opt_state.hyperparams:
+    #     current_lr = state.opt_state.hyperparams['learning_rate']
+    # else:
+    #     current_lr = jnp.array(0.0)  # 或者跳过，或报 warning
+    current_lr = lr_schedule_fn(state.step)
+
     info = {
         "loss": loss,
         "grad_norm": optax.global_norm(grads),
         "param_norm": optax.global_norm(kernel_params),
+        "learning_rate": current_lr,
     }
     return new_state, info
 
@@ -294,8 +306,15 @@ def main(config: _config.TrainConfig):
     if resuming:
         train_state = _checkpoints.restore_state(checkpoint_manager, train_state, data_loader)
 
+    # TODO: [CYL] 添加一些前处理代码
+    lr_schedule_fn = config.lr_schedule.create()
+    metrics_logger = MetricsLogger(
+        output_dir=os.path.join(config.checkpoint_base_dir, "metrics"),
+        filename="loss.json"
+    )
+
     ptrain_step = jax.jit(
-        functools.partial(train_step, config),
+        functools.partial(train_step, config, lr_schedule_fn),
         in_shardings=(replicated_sharding, train_state_sharding, data_sharding),
         out_shardings=(train_state_sharding, replicated_sharding),
         donate_argnums=(1,),
@@ -313,19 +332,23 @@ def main(config: _config.TrainConfig):
     for step in pbar:
         with sharding.set_mesh(mesh):
             train_state, info = ptrain_step(train_rng, train_state, batch)
-        infos.append(info)
-        # logging.warning(f"[train_state] {train_state};")  
+        infos.append(info) 
         
-        if step % config.log_interval == 0:
-            # import ipdb
-            # ipdb.set_trace()
-            
+        if step % config.log_interval == 0:            
             stacked_infos = common_utils.stack_forest(infos)
             reduced_info = jax.device_get(jax.tree.map(jnp.mean, stacked_infos))
-            info_str = ", ".join(f"{k}={v:.4f}" for k, v in reduced_info.items())
+            logging.warning(f"[reduced_info] {reduced_info};")  
+            info_str = ", ".join(f"{k}={v:.6f}" for k, v in reduced_info.items())
             pbar.write(f"Step {step}: {info_str}")
             wandb.log(reduced_info, step=step)
             infos = []
+
+            metrics_logger.log_step(
+                step=step,
+                global_step=step,
+                loss=reduced_info["loss"].tolist(),
+                lr=reduced_info["learning_rate"].tolist(),
+            )
         batch = next(data_iter)
 
         if (step % config.save_interval == 0 and step > start_step) or step == config.num_train_steps - 1:
@@ -334,7 +357,7 @@ def main(config: _config.TrainConfig):
     logging.info("Waiting for checkpoint manager to finish")
     checkpoint_manager.wait_until_finished()
 
-    # 执行一些后处理，输出目录调整，拷贝norm_stats.json等
+    # TODO: [CYL] 执行一些后处理，输出目录调整，拷贝norm_stats.json等
     postprocess(config)
 
 
