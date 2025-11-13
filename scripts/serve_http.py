@@ -20,6 +20,10 @@ import base64
 from io import BytesIO
 from PIL import Image
 
+# 或者提供默认值
+states_len = os.getenv('STATES_LEN', 8)
+
+
 class EnvMode(enum.Enum):
     """Supported environments."""
     ALOHA = "aloha"
@@ -98,11 +102,11 @@ class InferenceRequest(BaseModel):
     state: Optional[list] = None
     prompt: Optional[str] = None  # 如果请求没给，则使用 default_prompt
 
-
 class InferenceResponse(BaseModel):
-    action: list
-    timestamp: float
-    # 可根据实际返回添加更多字段
+    status: int = 0
+    message: str = "success"
+    result: Dict[str, Any] = {}
+
 
 
 def find_first_params_dir(root_dir):
@@ -165,6 +169,8 @@ def main(args: Args) -> None:
         try:
             logging.info(f"[act] Received request: {request.prompt}; {request.state}")
 
+            if len(request.state) != states_len:
+                return InferenceResponse(status=1, message=f"invalid state length, need size: (1 x {states_len})")
             # 构造输入数据（根据你的 policy 接口调整）
             data = {
                 "observation/image": base64_to_pil(request.image),
@@ -181,12 +187,15 @@ def main(args: Args) -> None:
             actions = result.get("actions") if isinstance(result, dict) else result
             timestamp = result.get("timestamp", 0.0) if isinstance(result, dict) else 0.0
 
-            return InferenceResponse(action=actions[:5].tolist(), timestamp=timestamp)
+            result = {
+                "action": actions[:5].tolist(),
+                "timestamp": timestamp,
+            }
+            return InferenceResponse(status=0, result=result, message="success")
 
         except Exception as e:
             logging.exception(e)
-            logging.error("Policy inference failed", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
+            return InferenceResponse(status=1, message=f"{str(e)}")
 
     # 启动前打印信息
     hostname = socket.gethostname()

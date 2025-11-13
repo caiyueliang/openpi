@@ -5,6 +5,7 @@
 import argparse
 import base64
 import requests
+import logging
 from pathlib import Path
 
 # -------------------- 命令行解析 --------------------
@@ -28,7 +29,9 @@ def parse_args():
 def image_to_base64(img_path: str) -> str:
     """读取图像并转为 base64 字符串"""
     with open(img_path, "rb") as f:
-        return base64.b64encode(f.read()).decode("utf-8")
+        image_base64= base64.b64encode(f.read()).decode("utf-8")
+        # logging.warning(f"[INFO] {img_path} -> {image_base64} \n\n")
+    return image_base64
 
 # -------------------- 主流程 --------------------
 def main():
@@ -43,7 +46,7 @@ def main():
     request_data = {
         "image": image_to_base64(head_img_path),
         "wrist_image": image_to_base64(wrist_left_img_path),
-        "state": [-1.106, 0.529, 0.454, -1.241, 0.584, 1.419, -0.076, 0.000],
+        "state": [-1.106, 0.529, 0.454, -1.241, 0.584, 1.419, -0.076, 0],
         "prompt": "Pick up the bowl on the table near the right arm with the right arm.", 
     }
 
@@ -52,17 +55,23 @@ def main():
     if args.token:
         headers["Authorization"] = f"{args.token}"
 
+    print("state:", request_data["state"])
+
     # 4. 发送请求
     print(f"[INFO] POST -> {args.url}")
     response = requests.post(args.url, json=request_data, headers=headers)
 
     # 5. 处理返回
-    print("state:", request_data["state"])
+
+
     if response.status_code == 200:
         result = response.json()
-        print("Action:", result["action"])
-        print("Timestamp:", result["timestamp"])
+        if result["status"] == 0:
+            print("Action:", result["result"]["action"])
+        else:
+            print("Error message:", result["message"])
     else:
+        print("Error Code: ", response.status_code)
         print("Error:", response.json())
 
 if __name__ == "__main__":
