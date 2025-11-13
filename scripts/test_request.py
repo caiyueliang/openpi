@@ -69,7 +69,7 @@ def main():
         if result["status"] == 0:
             print("Action:", result["result"]["action"])
         else:
-            print("Error message:", result["message"])
+            print("Error message:", result)
     else:
         print("Error Code: ", response.status_code)
         print("Error:", response.json())
