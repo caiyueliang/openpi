@@ -49,23 +49,22 @@ def main():
         "state": [-1.106, 0.529, 0.454, -1.241, 0.584, 1.419, -0.076, 0],
         "prompt": "Pick up the bowl on the table near the right arm with the right arm.", 
     }
-
+    print("state:", request_data["state"])
+    
     # 3. 构造请求头
     headers = {"Content-Type": "application/json"}
     if args.token:
         headers["Authorization"] = f"{args.token}"
-
-    print("state:", request_data["state"])
 
     # 4. 发送请求
     print(f"[INFO] POST -> {args.url}")
     response = requests.post(args.url, json=request_data, headers=headers)
 
     # 5. 处理返回
-
-
     if response.status_code == 200:
         result = response.json()
+        print("response:", result)
+
         if result["status"] == 0:
             print("Action:", result["result"]["action"])
         else:
