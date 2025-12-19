@@ -4,7 +4,7 @@ This script is used to compute the normalization statistics for a given config. 
 will compute the mean and standard deviation of the data in the dataset and save it
 to the config assets directory.
 """
-
+import sys
 import numpy as np
 import tqdm
 import tyro
@@ -15,9 +15,19 @@ import openpi.training.config as _config
 import openpi.training.data_loader as _data_loader
 import openpi.transforms as transforms
 import dataclasses
+import logging
 
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s][%(levelname)s][%(filename)s:%(lineno)d][%(funcName)s] %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('lerobot_http.log')
+    ]
+)
 
-print(f"[DataConfig] {_config.DataConfig.__dataclass_fields__.keys()}")
+logging.info(f"[DataConfig] {_config.DataConfig.__dataclass_fields__.keys()}")
 
 class RemoveStrings(transforms.DataTransformFn):
     def __call__(self, x: dict) -> dict:
@@ -96,16 +106,16 @@ def main(config_name: str,
          rlds_data_dir: str | None = None
     ) -> None:
     config = _config.get_config(config_name)
-    print(f"[data_config] ================================================")
-    print(f"[config] {config}")
-    print(f"[config.assets_dirs] {config.assets_dirs}")
-    print(f"[config.model] {config.model}")
+    logging.warning(f"[data_config] ================================================")
+    logging.warning(f"[config] {config}")
+    logging.warning(f"[config.assets_dirs] {config.assets_dirs}")
+    logging.warning(f"[config.model] {config.model}")
     data_config = config.data.create(config.assets_dirs, config.model)
-    print(f"[data_config] ================================================")
-    print(f"[data_config] {data_config}")
-    print(f"[data_config.repo_id] before: {data_config.repo_id}")
-    print(f"[data_config.asset_id] before: {data_config.asset_id}")
-    print(f"[data_config.rlds_data_dir] before: {data_config.rlds_data_dir}")
+    logging.warning(f"[data_config] ================================================")
+    logging.warning(f"[data_config] {data_config}")
+    logging.warning(f"[data_config.repo_id] before: {data_config.repo_id}")
+    logging.warning(f"[data_config.asset_id] before: {data_config.asset_id}")
+    logging.warning(f"[data_config.rlds_data_dir] before: {data_config.rlds_data_dir}")
 
     # 使用 dataclasses.replace() 创建新的配置对象，而不是直接修改字段
     if repo_id is not None or asset_id is not None or rlds_data_dir is not None:
@@ -118,11 +128,11 @@ def main(config_name: str,
         src_repo_id = data_config.repo_id
     else:
         src_repo_id = data_config.repo_id
-    print(f"[data_config] ================================================")
-    print(f"[data_config.repo_id] after: {data_config.repo_id}")
-    print(f"[data_config.asset_id] after: {data_config.asset_id}")
-    print(f"[data_config.rlds_data_dir] after: {data_config.rlds_data_dir}")
-    print(f"[data_config] ================================================")
+    logging.warning(f"[data_config] ================================================")
+    logging.warning(f"[data_config.repo_id] after: {data_config.repo_id}")
+    logging.warning(f"[data_config.asset_id] after: {data_config.asset_id}")
+    logging.warning(f"[data_config.rlds_data_dir] after: {data_config.rlds_data_dir}")
+    logging.warning(f"[data_config] ================================================")
 
     if data_config.rlds_data_dir is not None:
         data_loader, num_batches = create_rlds_dataloader(
