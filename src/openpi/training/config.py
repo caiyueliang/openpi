@@ -962,6 +962,50 @@ _CONFIGS = [
         pytorch_weight_path="/path/to/your/pytorch_weight_path",
         num_train_steps=1000,
     ),
+    # TODO [CYL] taichu: 分体式松灵机器人（和pi05_aloha_pen_uncap的配置有点像，多了task；NormalizeGripperDims）
+    TrainConfig(
+        name="pi05_aloha_put_I_T",
+        model=pi0_config.Pi0Config(pi05=True),
+        data=LeRobotAlohaDataConfig(
+            repo_id="foshan/zdtc_aloha_put_I_T_video",
+            assets=AssetsConfig(
+                assets_dir="gs://openpi-assets/checkpoints/pi05_base/assets",
+                asset_id="trossen",
+            ),
+            default_prompt="Pich up all the plastic pipe fittings and place them into the white plastic box.",
+            repack_transforms=_transforms.Group(
+                inputs=[
+                    _transforms.RepackTransform(
+                        {
+                            "images": {     # 3个视图
+                                "cam_high": "observation.images.cam_high",
+                                "cam_left_wrist": "observation.images.cam_left_wrist",
+                                "cam_right_wrist": "observation.images.cam_right_wrist",
+                            },
+                            "state": "observation.state",
+                            "actions": "action",
+                            "task": "task",
+                        }
+                    ),
+                    _transforms.NormalizeGripperDims(
+                        gripper_indices=(6, 13),
+                        original_min=0.0,
+                        original_max=0.1,
+                        new_min=0.0,
+                        new_max=1.0,
+                        flip=True,
+                    ),
+                ]
+            ),
+            base_config=DataConfig(
+                prompt_from_task=True,
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+        num_train_steps=30_000,
+        batch_size=64
+    ),
+
     #
     # Fine-tuning Aloha configs.
     #
@@ -996,6 +1040,7 @@ _CONFIGS = [
         weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=20_000,
     ),
+
     TrainConfig(
         name="pi05_aloha_pen_uncap",
         model=pi0_config.Pi0Config(pi05=True),
@@ -1026,6 +1071,7 @@ _CONFIGS = [
         num_train_steps=20_000,
         batch_size=64,
     ),
+
     #
     # Fine-tuning DROID configs.
     #
