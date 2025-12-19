@@ -36,6 +36,57 @@ class DataTransformFn(Protocol):
         """
 
 
+ # TODO [CYL] taichu: 分体式松灵机器人
+@dataclasses.dataclass(frozen=True)
+class NormalizeGripperDims(DataTransformFn):
+    """Normalize gripper dimensions from raw sensor values to a standard range.
+    
+    This transform should be applied BEFORE AlohaInputs to normalize raw LeRobot 
+    gripper values to a consistent range before any robot-specific conversions.
+    
+    By default, AgileX gripper values use 0 for fully closed and 0.1 for fully open.
+    Pi0 Aloha Trossen expects 0 for fully open and 1 for fully closed gripper values.
+    """
+    
+    # Indices of gripper dimensions in state and actions
+    gripper_indices: tuple[int, ...] = (6, 13)  # Default for ALOHA (left, right gripper)
+    
+    # Original gripper value range from your robot/dataset
+    original_min: float = 0.0
+    original_max: float = 0.1
+    
+    # Target normalized range
+    new_min: float = 0.0
+    new_max: float = 1.0
+    
+    # If True, flips the normalized interval (reverses open/closed mapping)
+    flip: bool = True
+    
+    def __call__(self, data: DataDict) -> DataDict:
+        # Option A: In-place modification (your original approach)
+        if "state" in data:
+            state = np.asarray(data["state"])
+            data["state"] = self._normalize_gripper_dims(state, list(self.gripper_indices))
+        
+        if "actions" in data:
+            actions = np.asarray(data["actions"])
+            data["actions"] = self._normalize_gripper_dims(actions, list(self.gripper_indices))
+        
+        return data
+
+    def _normalize_gripper_dims(self, data_array: np.ndarray, dims: list[int]) -> np.ndarray:
+        dim_data = data_array[..., dims]
+        
+        scale = (self.new_max - self.new_min) / (self.original_max - self.original_min)
+        normalized_dims = self.new_min + (dim_data - self.original_min) * scale
+        
+        if self.flip:
+            normalized_dims = self.new_max - (normalized_dims - self.new_min)
+        
+        data_array[..., dims] = np.clip(normalized_dims, self.new_min, self.new_max)
+        return data_array
+
+
 @dataclasses.dataclass(frozen=True)
 class Group:
     """A group of transforms."""
