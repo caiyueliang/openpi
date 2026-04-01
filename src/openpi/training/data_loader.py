@@ -146,7 +146,11 @@ def create_torch_dataset(
     )
 
     if data_config.prompt_from_task:
-        dataset = TransformedDataset(dataset, [_transforms.PromptFromLeRobotTask(dataset_meta.tasks)])
+        # TODO: [CYL] 从 dataset_meta.tasks 中提取 prompt
+        # 原来是直接从 dataset_meta.tasks 中提取 prompt，但是 LeRobotAlohaDataConfig 中没有 prompt 字段，所以需要从 task_index 中提取 prompt
+        # dataset = TransformedDataset(dataset, [_transforms.PromptFromLeRobotTask(dataset_meta.tasks)])
+        tasks_dict = {idx: task for task, idx in dataset_meta.tasks["task_index"].items()}
+        dataset = TransformedDataset(dataset, [_transforms.PromptFromLeRobotTask(tasks_dict)])
 
     return dataset
 
